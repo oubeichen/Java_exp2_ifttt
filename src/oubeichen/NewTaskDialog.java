@@ -35,7 +35,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
     public NewTaskDialog(java.awt.Frame parent, boolean modal, String title) {
         super(parent, modal);
         initComponents();
-        this.setLocationRelativeTo(null);
+        this.setLocationRelativeTo(null); //居中显示
         /*设置一些控件的默认属性，防止出问题*/
         //ThisDateText = null;
         //ThisDateText = new JTextField("hgaha");
@@ -731,7 +731,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
             
             props.setProperty(tsk.thatstring1, Access_token);
             try {
-                props.store(new FileOutputStream("weiboauth.properties"), "");
+                props.store(new FileOutputStream("weiboauth.properties"), "微博验证\n格式：<用户名> = <AccessToken>");
             } catch (IOException ex) {
                 javax.swing.JOptionPane.showMessageDialog(this, "写入weiboauth.properties失败！", "文件读写失败", javax.swing.JOptionPane.ERROR_MESSAGE);
                 Logger.getLogger(NewTaskDialog.class.getName()).log(Level.SEVERE, null, ex);

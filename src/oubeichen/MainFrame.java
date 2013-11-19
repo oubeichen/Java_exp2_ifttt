@@ -101,7 +101,6 @@ public class MainFrame extends javax.swing.JFrame {
         TaskRightClickPopMenu.add(StartPopMenu);
 
         PausePopMenu.setText("暂停/恢复任务");
-        PausePopMenu.setActionCommand("暂停/恢复任务");
         PausePopMenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 PausePopMenuActionPerformed(evt);
@@ -118,6 +117,7 @@ public class MainFrame extends javax.swing.JFrame {
         RunningTaskRightClickPopMenu.add(StopPopMenu);
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("单机版IFTTT(111220086欧北辰)");
 
         IFTTTLabel.setFont(new java.awt.Font("幼圆", 0, 36)); // NOI18N
         IFTTTLabel.setText("单机版IFTTT");
@@ -257,10 +257,20 @@ public class MainFrame extends javax.swing.JFrame {
 
         LoadMenu.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_L, java.awt.event.InputEvent.CTRL_MASK));
         LoadMenu.setText("读取");
+        LoadMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                LoadMenuActionPerformed(evt);
+            }
+        });
         FileMenu.add(LoadMenu);
 
         SaveMenu.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_MASK));
         SaveMenu.setText("保存");
+        SaveMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SaveMenuActionPerformed(evt);
+            }
+        });
         FileMenu.add(SaveMenu);
 
         jMenuItem3.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0));
@@ -335,6 +345,7 @@ public class MainFrame extends javax.swing.JFrame {
 
         HelpMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F1, 0));
         HelpMenuItem.setText("帮助");
+        HelpMenuItem.setEnabled(false);
         HelpMenu.add(HelpMenuItem);
 
         AboutMenuItem.setText("关于");
@@ -364,13 +375,16 @@ public class MainFrame extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     /*下面是监听事件的函数*/
+    /**
+     * 新建任务，弹出新建任务窗口
+     * @param evt 
+     */
     private void NewTaskMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NewTaskMenuActionPerformed
         // TODO add your handling code here:
         if (newTaskDialog == null) {
             newTaskDialog = new NewTaskDialog(this, true, "新建任务");//新建对话框，并且使得主窗口无法使用。
         }
         newTaskDialog.setVisible(true);
-
         if (newTaskDialog.OK == true)//写入任务
         {
             Task tsk;
@@ -387,16 +401,30 @@ public class MainFrame extends javax.swing.JFrame {
         newTaskDialog = null;
         UpdateTaskList();
     }//GEN-LAST:event_NewTaskMenuActionPerformed
-
+    /**
+     * 弹出关于对话框
+     * @param evt 
+     */
     private void AboutMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AboutMenuItemActionPerformed
         // TODO add your handling code here:
+        if(aboutDialog == null)
+        {
+            aboutDialog = new AboutDialog(this,true);
+        }
+        aboutDialog.setVisible(true);
     }//GEN-LAST:event_AboutMenuItemActionPerformed
-
+    /**
+     * 编辑菜单
+     * @param evt 
+     */
     private void EditTaskMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditTaskMenuActionPerformed
         // TODO add your handling code here:
         onEditTask();
     }//GEN-LAST:event_EditTaskMenuActionPerformed
-
+    /**
+     * 在TaskList中选择不同Task，显示不同的信息
+     * @param evt 
+     */
     private void TaskListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_TaskListValueChanged
         // TODO add your handling code here:
         //System.out.println(evt.toString());
@@ -538,6 +566,14 @@ public class MainFrame extends javax.swing.JFrame {
         // TODO add your handling code here:
         PauseMenuActionPerformed(evt);
     }//GEN-LAST:event_PausePopMenuActionPerformed
+
+    private void LoadMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LoadMenuActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_LoadMenuActionPerformed
+
+    private void SaveMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveMenuActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_SaveMenuActionPerformed
     /*下面是自定义的函数*/
 
     /**
@@ -634,7 +670,9 @@ public class MainFrame extends javax.swing.JFrame {
         }
         return TaskContentStr.toString();
     }
-
+    /**
+     * 用于刷新任务日志输出，也就是LogTextArea
+     */
     private void updateLog() {
         int SelectedTask = RunningTaskList.getSelectedIndex();
         if (SelectedTask >= RunningTasks.size() || SelectedTask < 0) {
@@ -757,18 +795,17 @@ public class MainFrame extends javax.swing.JFrame {
                 }
             } else {//等邮件
                 int lastmessage_num = -1;
-                                        POP3SClient pop3 = new POP3SClient(true);
-                                        POP3MessageInfo[] messages;
+                POP3SClient pop3 = new POP3SClient(true);
+                POP3MessageInfo[] messages;
+                pop3.setDefaultTimeout(600000);
                 while (true) {
                     try {
-
-                        pop3.setDefaultTimeout(600000);
                         pop3.connect("pop." + thisstring1.split("@")[1]);//pop. + domain
                         if (!pop3.login(thisstring1, thisstring2)) {
-                        pop3.disconnect();
-                        appendTaskLog("Could not login to server.  Check password.");
-                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
-                        return;
+                            pop3.disconnect();
+                            appendTaskLog("Could not login to server.  Check password.");
+                            new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                            return;
                         }
                         messages = pop3.listMessages();
                         if (lastmessage_num < 0) {//尚未初始化邮件数目
@@ -777,8 +814,7 @@ public class MainFrame extends javax.swing.JFrame {
                         } else if (lastmessage_num < messages.length) {//收到新的邮件
                             break;
                         }
-
-                        appendTaskLog("等待收到邮件。当前未读邮件数：" + messages.length);
+                        //appendTaskLog("等待收到邮件。当前未读邮件数：" + messages.length);
                         Thread.sleep(10000);
                     } catch (Exception ex) {
                         appendTaskLog(ex.getMessage());
@@ -786,7 +822,6 @@ public class MainFrame extends javax.swing.JFrame {
                         return;
                     }
                 }
-
             }
             if (thatindex == 0) {//发邮件
                  SimpleEmail email = new SimpleEmail();
@@ -902,7 +937,7 @@ public class MainFrame extends javax.swing.JFrame {
                 task_to_remove.appendTaskLog(ex.getMessage());
             }
             String TaskInfo;
-            switch (code) {
+            switch (code) {//根据不同code设置不同的输出信息
                 case RunningTask.SUCCESS:
                     TaskInfo = "任务成功完成！";
                     break;
@@ -996,6 +1031,7 @@ public class MainFrame extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
     private NewTaskDialog newTaskDialog = null;//新建任务对话框
     private NewTaskDialog editTaskDialog = null;//编辑任务对话框
+    private AboutDialog aboutDialog = null;//关于对话框
     private ArrayList<Task> Tasks = new ArrayList<Task>();//任务列表数组
     private static ArrayList<RunningTask> RunningTasks = new ArrayList<RunningTask>();//正在运行的任务列表数组
     //private static ArrayList<Thread> TaskThreads = new ArrayList<Thread>();
