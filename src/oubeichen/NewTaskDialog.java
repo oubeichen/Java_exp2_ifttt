@@ -5,12 +5,9 @@
 package oubeichen;
 
 import java.awt.event.KeyEvent;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
@@ -23,7 +20,6 @@ import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.text.DefaultFormatterFactory;
 import javax.swing.text.MaskFormatter;
 import weibo4j.Oauth;
-import weibo4j.examples.oauth2.Log;
 import weibo4j.model.WeiboException;
 import weibo4j.util.BareBonesBrowserLaunch;
 
@@ -725,11 +721,6 @@ public class NewTaskDialog extends javax.swing.JDialog {
                 System.out.print(code);
             } catch (WeiboException e) {
                 javax.swing.JOptionPane.showMessageDialog(this, "授权失败，请检查网络！", "授权失败", javax.swing.JOptionPane.ERROR_MESSAGE);
-                if (401 == e.getStatusCode()) {
-                    Log.logInfo("Unable to get the access token.");
-                } else {
-                    e.printStackTrace();
-                }
                 return;
             }
             

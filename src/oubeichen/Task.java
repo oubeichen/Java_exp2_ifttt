@@ -6,9 +6,9 @@ package oubeichen;
 
 /**
  *
- * @author oubeichen 用于存储任务信息
+ * @author oubeichen 用于存储任务信息，最基本的内容
  */
-public class Task implements Cloneable {//独立性，防止复制的时候变成引用复制
+public class Task extends Thread implements Cloneable {//独立性，防止复制的时候变成引用复制
 
     public String UID;//唯一的标识符，用于识别
     public String taskname;

@@ -39,7 +39,6 @@ public class Getpage {
 			System.out.println("Timeout:" + page);
 			return null;
 		} catch (Exception ex) {
-			ex.printStackTrace();
 			return null;
 		}
 	}
