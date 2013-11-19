@@ -7,8 +7,10 @@ import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 /**
- *
- * @author oubeichen 用于获取网页完整内容，也就是Oauth的Code
+ *  此类是我以前摘自网络并自行修改的内容，已经找不到出处
+ * @author oubeichen 
+ * 用于获取网页完整html代码
+ * 这里用来获取Oauth的Code
  */
 public class Getpage {
 	public static String getPage(String page) {

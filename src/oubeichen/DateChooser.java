@@ -1,6 +1,7 @@
 package oubeichen;
 
 /**
+ * 摘自网络，信息如下：
  * ClassName:DateChooser
  * Copyright: copyright (c)2012
  * @author   Deng Zhiguang

@@ -5,8 +5,8 @@
 package oubeichen;
 
 /**
- *
- * @author oubeichen 用于存储任务信息，最基本的内容
+ * 用于存储任务信息，最基本的内容
+ * @author oubeichen 
  */
 public class Task extends Thread implements Cloneable {//独立性，防止复制的时候变成引用复制
 
@@ -24,6 +24,9 @@ public class Task extends Thread implements Cloneable {//独立性，防止复�
     public Task(Task tsk){
         Copy(tsk);
     }
+    /*
+     * 克隆类默认函数
+     */
     public final void Copy(Task tsk) {
         UID = tsk.UID;
         taskname = tsk.taskname;

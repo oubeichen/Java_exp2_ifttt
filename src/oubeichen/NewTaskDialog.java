@@ -9,7 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Calendar;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -24,7 +24,7 @@ import weibo4j.model.WeiboException;
 import weibo4j.util.BareBonesBrowserLaunch;
 
 /**
- *
+ * 新建或者修改任务时弹出的窗口类
  * @author oubeichen
  */
 public class NewTaskDialog extends javax.swing.JDialog {
@@ -36,16 +36,22 @@ public class NewTaskDialog extends javax.swing.JDialog {
         super(parent, modal);
         initComponents();
         this.setLocationRelativeTo(null);
+        /*设置一些控件的默认属性，防止出问题*/
         //ThisDateText = null;
         //ThisDateText = new JTextField("hgaha");
         this.setTitle(title);
         TitleLabel.setText(title);
         ThisTimePanel.setVisible(true);
         ThisMailPanel.setVisible(false);
-        Calendar initdate = Calendar.getInstance();
-        initdate.setTime(new Date());//初始化为今天
-        ThisDateText.setText(initdate.get(Calendar.YEAR) + "-" + (initdate.get(Calendar.MONTH) + 1) + "-" + initdate.get(Calendar.DAY_OF_MONTH));
         TaskNameText.setText("任务" + tasknum + "(到达时间-发邮件)");
+        /*开始设置默认时间为当前时间*/
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date nowdate = new Date();
+        nowdate.setTime(nowdate.getTime() + 1000 * 60 * 2);//设置为当前时间 + 2分钟
+        ThisDateText.setText(sdf.format(nowdate));//设置为date的日期
+        sdf.applyPattern("HH:mm");
+        ThisTimeText.setText(sdf.format(nowdate));
+
     }
 
     /**
@@ -163,7 +169,6 @@ public class NewTaskDialog extends javax.swing.JDialog {
                 .addGap(0, 13, Short.MAX_VALUE))
         );
 
-        ThisPassText.setText("a19870825");
         ThisPassText.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
                 ThisPassTextKeyReleased(evt);
@@ -174,7 +179,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
 
         ThisPassLabel.setText("密码：");
 
-        ThisAccText.setText("oubeichen@gmail.com");
+        ThisAccText.setText("oubeichen@126.com");
         ThisAccText.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 ThisAccTextKeyPressed(evt);
@@ -629,7 +634,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
             regexp = Pattern.compile(("^([0-9]{4})-([0][1-9]|[1][0-2])-([0][1-9]|[1-2][0-9]|[3][0-1])$"));
             matcher = regexp.matcher(temp);
             if (!matcher.matches()) {
-                javax.swing.JOptionPane.showMessageDialog(this, "日期！", "输入错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+                //javax.swing.JOptionPane.showMessageDialog(this, "输入日期有误！", "输入错误", javax.swing.JOptionPane.ERROR_MESSAGE);
                 return false;
             }
             temp = ThisTimeText.getText();//检查时间
@@ -698,7 +703,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
     }
     public void setWeibo()
     {
-                Properties props = new Properties();
+        Properties props = new Properties();
         try {
             props.load(new FileInputStream("weiboauth.properties"));
         } catch (Exception ex) {
@@ -738,6 +743,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
     public boolean OK = false;
     private Task tsk = new Task();
     static int tasknum = 1;//用于自增任务数
+    String defaultMailUser,defaultMailPass;//默认的邮箱账号密码
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CancelButton;
     private javax.swing.JLabel IfLabel;

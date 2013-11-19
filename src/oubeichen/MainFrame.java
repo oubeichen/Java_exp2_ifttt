@@ -14,10 +14,13 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.Random;
 import javax.swing.DefaultListModel;
-import weibo4j.model.WeiboException;
+import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail.SimpleEmail;
+import org.apache.commons.net.pop3.POP3MessageInfo;
+import org.apache.commons.net.pop3.POP3SClient;
 
 /**
- *
+ *  主窗口类
  * @author oubeichen
  */
 public class MainFrame extends javax.swing.JFrame {
@@ -651,7 +654,7 @@ public class MainFrame extends javax.swing.JFrame {
      */
     private void RemoveRunningTask(RunningTask trd_to_remove , String TaskInfo) {
                 //根据不同code显示不同的信息
-                javax.swing.JOptionPane.showMessageDialog(this, getTaskContent(trd_to_remove),TaskInfo, javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                javax.swing.JOptionPane.showMessageDialog(this, getTaskContent(trd_to_remove) + "任务运行情况：\n" + trd_to_remove.tasklog.toString() , TaskInfo , javax.swing.JOptionPane.INFORMATION_MESSAGE);
                 RunningTasks.remove(trd_to_remove);
                 UpdateRunningTaskList();
     }
@@ -693,13 +696,16 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
     }
+    
     /*下面开始定义类中类*/
 
     /**
      * 正在运行的任务，包括继承的Task，判断是否手动停止的标识符和一个Thread
      */
     class RunningTask extends Task {
-
+        private final static int SUCCESS = 0;
+        private final static int TIMEOUT = 1;
+        private final static int RUNTIMEERROR = 10;
         public RunningTask() {
             super();
             isPaused = true;
@@ -712,19 +718,21 @@ public class MainFrame extends javax.swing.JFrame {
 
         @Override
         public void run() {
-            if (thisindex == 0) {//到达时间
-                Date tasktime = new Date();
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-ddhh:mm");  //将时间拼到一起变成这种格式
+            if (thisindex == 0) {//等时间
+                Date tasktime;
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-ddHH:mm");  //将时间拼到一起变成这种格式
                 try {
                     tasktime = sdf.parse(thisstring1 + thisstring2);
                     //if(cl.)
                 } catch (ParseException ex) {
                     appendTaskLog(ex.getMessage());
+                    new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                    return;
                 }
                 Date nowtime = new Date();
                 if (nowtime.after(tasktime)) {
                     setTaskLog("任务已经超时！");
-                    new AutoRemoveRunningTaskThread(this,1).start();//新建一个把自己删掉的线程
+                    new AutoRemoveRunningTaskThread(this, TIMEOUT, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
                     return;
                 }
                 while (nowtime.before(tasktime)) {
@@ -737,44 +745,115 @@ public class MainFrame extends javax.swing.JFrame {
                         Thread.sleep(5000);
                     } catch (InterruptedException ex) {
                         appendTaskLog(ex.getMessage());
+                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                        return;
                     }
                     nowtime = new Date();
                 }
                 if (nowtime.getTime() - tasktime.getTime() > 60 * 1000) {//已经过去一分钟
                     setTaskLog("任务已经超时！");
-                    new AutoRemoveRunningTaskThread(this,1).start();//新建一个把自己删掉的线程
+                    new AutoRemoveRunningTaskThread(this, TIMEOUT, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
                     return;
                 }
-            } else {//收到邮件
-                
+            } else {//等邮件
+                int lastmessage_num = -1;
+                                        POP3SClient pop3 = new POP3SClient(true);
+                                        POP3MessageInfo[] messages;
+                while (true) {
+                    try {
+
+                        pop3.setDefaultTimeout(600000);
+                        pop3.connect("pop." + thisstring1.split("@")[1]);//pop. + domain
+                        if (!pop3.login(thisstring1, thisstring2)) {
+                        pop3.disconnect();
+                        appendTaskLog("Could not login to server.  Check password.");
+                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                        return;
+                        }
+                        messages = pop3.listMessages();
+                        if (lastmessage_num < 0) {//尚未初始化邮件数目
+                            lastmessage_num = messages.length;//初始化为第一次收到的邮件数目
+                            appendTaskLog("等待收到邮件。当前未读邮件数：" + lastmessage_num);
+                        } else if (lastmessage_num < messages.length) {//收到新的邮件
+                            break;
+                        }
+
+                        appendTaskLog("等待收到邮件。当前未读邮件数：" + messages.length);
+                        Thread.sleep(10000);
+                    } catch (Exception ex) {
+                        appendTaskLog(ex.getMessage());
+                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                        return;
+                    }
+                }
+
             }
             if (thatindex == 0) {//发邮件
-                
+                 SimpleEmail email = new SimpleEmail();
+                 if (thisindex == 0) {//定时发送，所以只能用默认邮箱发送
+                    Properties props = new Properties();
+                    String user,pass;
+                    try {
+                        props.load(new FileInputStream("defaultmail.properties"));
+                        if ((user = (String) props.get("user")) == null
+                                || (pass = (String)props.get("pass")) == null) {
+                            appendTaskLog("请设置默认邮箱！");
+                            new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                            return;
+                        }
+                        email.setHostName("smtp." + user.split("@")[1]);//邮件服务器 默认 为smtp. + domain
+                        email.setAuthentication(user,pass);//smtp认证的用户名和密码  
+                        email.setSSLOnConnect(true);
+                        email.addTo(thatstring1, "JAVA EXP2 RECEIVER");//收信者  
+                        email.setFrom(user, "JAVA EXP2 SENDER");//发信者  
+                        email.setSubject("JAVA EXP2 SEND EMAIL");//标题  
+                        email.setCharset("UTF-8");//编码格式  
+                        email.setMsg(thatstring2);//内容  
+                        email.send();//发送  
+                    } catch (Exception ex) {
+                        appendTaskLog(ex.getMessage());
+                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                        return;
+                    }
+                }else{//定时发送，所以只能用默认邮箱发送
+                    try {
+                        email.setHostName("smtp." + thisstring1.split("@")[1]);//邮件服务器 默认 为smtp. + domain
+                        email.setAuthentication(thisstring1, thisstring2);//smtp认证的用户名和密码  
+                        email.addTo(thatstring1, "JAVA EXP2 RECEIVER");//收信者  
+                        email.setFrom(thisstring1, "JAVA EXP2 SENDER");//发信者  
+                        email.setSubject("JAVA EXP2 SEND EMAIL");//标题  
+                        email.setCharset("UTF-8");//编码格式  
+                        email.setMsg(thatstring2);//内容  
+                        email.send();//发送  
+                    } catch (EmailException ex) {
+                        appendTaskLog(ex.getMessage());
+                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                        return;
+                    }
+                }
             } else {//发微博
                 Properties props = new Properties();
                 try {
                     props.load(new FileInputStream("weiboauth.properties"));
-                } catch (Exception ex) {
-                    setTaskLog(ex.getMessage());
-                }
-                String Access_token;
-                if ((Access_token = (String) props.get(thatstring1)) == null) {
-
-                    return;
-                }
-                try {
+                    String Access_token;
+                    if ((Access_token = (String) props.get(thatstring1)) == null) {
+                        appendTaskLog("微博还没被授权！");
+                        new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                        return;
+                    }
                     UpdateStatus.Update(Access_token, thatstring2);
-                } catch (WeiboException ex) {
+                } catch (Exception ex) {
                     appendTaskLog(ex.getMessage());
+                    new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
+                    return;
                 }
             }
             //RunningTasks.remove(tsk.UID);
-            new AutoRemoveRunningTaskThread(this,0).start();//新建一个把自己删掉的线程
+            new AutoRemoveRunningTaskThread(this, SUCCESS).start();//新建一个把自己删掉的线程
         }
 
         /**
-         * 用于给正在运行任务加日志
-         * 外部也可调用
+         * 用于给正在运行任务加日志 外部也可调用
          * @param Info 要扩展的日志
          */
         public void appendTaskLog(String Info) {
@@ -784,7 +863,6 @@ public class MainFrame extends javax.swing.JFrame {
 
         /**
          * 用于给正在运行任务设置日志
-         *
          * @param Info 目标日志
          */
         private void setTaskLog(String Info) {
@@ -802,28 +880,42 @@ public class MainFrame extends javax.swing.JFrame {
     class AutoRemoveRunningTaskThread extends Thread {
 
         RunningTask task_to_remove;
-        int code;//用于表示线程不同执行结果 0为正常完成，1为超时
-        
-        public AutoRemoveRunningTaskThread(RunningTask task,int cod) {
+        int code;//用于表示线程不同执行结果 在RunningTask里定义
+        int time = 5000;//默认休眠5000
+
+        public AutoRemoveRunningTaskThread(RunningTask task, int cod) {
             task_to_remove = task;
             code = cod;
+        }
+
+        public AutoRemoveRunningTaskThread(RunningTask task, int cod, int t) {
+            task_to_remove = task;
+            code = cod;
+            time = t;
         }
 
         @Override
         public void run() {
             try {
-                Thread.sleep(1000);//休眠一秒钟然后开始删除调用这个线程的的Task线程
+                Thread.sleep(time);//休眠指定时间然后开始删除调用这个线程的的Task线程
             } catch (InterruptedException ex) {
                 task_to_remove.appendTaskLog(ex.getMessage());
             }
             String TaskInfo;
-            switch(code)
-            {
-                case 0:TaskInfo = "任务成功完成！";break;
-                case 1:TaskInfo = "任务已经超时！请检查设置的时间！";break;
-                default:TaskInfo = "未知情况！";
+            switch (code) {
+                case RunningTask.SUCCESS:
+                    TaskInfo = "任务成功完成！";
+                    break;
+                case RunningTask.TIMEOUT:
+                    TaskInfo = "任务已经超时！请检查设置的时间！";
+                    break;
+                case RunningTask.RUNTIMEERROR:
+                    TaskInfo = "任务运行出错！请检查设置！";
+                    break;
+                default:
+                    TaskInfo = "未知情况！";
             }
-            RemoveRunningTask(task_to_remove ,TaskInfo);
+            RemoveRunningTask(task_to_remove, TaskInfo);
         }
     }
     /**
