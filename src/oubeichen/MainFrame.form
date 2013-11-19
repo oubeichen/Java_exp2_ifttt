@@ -18,8 +18,7 @@
         </MenuItem>
         <MenuItem class="javax.swing.JMenuItem" name="StartPopMenu">
           <Properties>
-            <Property name="text" type="java.lang.String" value="jMenuItem1"/>
-            <Property name="actionCommand" type="java.lang.String" value="&#x5f00;&#x59cb;&#x4efb;&#x52a1;"/>
+            <Property name="text" type="java.lang.String" value="&#x5f00;&#x59cb;&#x4efb;&#x52a1;"/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="StartPopMenuActionPerformed"/>

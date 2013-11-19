@@ -4,13 +4,20 @@
  */
 package oubeichen;
 
-import java.awt.event.ActionEvent;
+import java.io.FileInputStream;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Properties;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
+import weibo4j.model.WeiboException;
 
 /**
  *
@@ -24,6 +31,7 @@ public class MainFrame extends javax.swing.JFrame {
     public MainFrame() {
         initComponents();
         this.setLocationRelativeTo(null); //居中显示
+        //new AutoRemoveRunningTaskThread().start();//自动移除自动停止的正在运行的任务
     }
 
     /**
@@ -81,7 +89,7 @@ public class MainFrame extends javax.swing.JFrame {
         });
         TaskRightClickPopMenu.add(EditPopMenu);
 
-        StartPopMenu.setText("jMenuItem1");
+        StartPopMenu.setText("开始任务");
         StartPopMenu.setActionCommand("开始任务");
         StartPopMenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -331,6 +339,7 @@ public class MainFrame extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    /*下面是监听事件的函数*/
     private void NewTaskMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NewTaskMenuActionPerformed
         // TODO add your handling code here:
         if (newTaskDialog == null) {
@@ -373,21 +382,8 @@ public class MainFrame extends javax.swing.JFrame {
             TaskContent.setText("");
             return;
         }
-        StringBuilder TaskContentStr = new StringBuilder();
         Task tsk = Tasks.get(SelectedTask);
-        TaskContentStr.append("UID：").append(tsk.UID).append("\n");
-        TaskContentStr.append("任务名称：").append(tsk.taskname).append("\n\n");
-        if (tsk.thisindex == 0) {
-            TaskContentStr.append("THIS类型：到达时间\n日期：").append(tsk.thisstring1).append("\n时间：").append(tsk.thisstring2).append("\n\n");
-        } else {
-            TaskContentStr.append("THIS类型：到达邮件\n邮箱名：").append(tsk.thisstring1).append("\n\n");
-        }
-        if (tsk.thatindex == 0) {
-            TaskContentStr.append("THAT类型：发送邮件\n目标邮箱：").append(tsk.thisstring1).append("\n内容：").append(tsk.thatstring2).append("\n");
-        } else {
-            TaskContentStr.append("THAT类型：发送微博\n微博用户名：").append(tsk.thisstring1).append("\n内容：").append(tsk.thatstring2).append("\n");
-        }
-        TaskContent.setText(TaskContentStr.toString());
+        TaskContent.setText(getTaskContent(tsk));
     }//GEN-LAST:event_TaskListValueChanged
 
     private void DelTaskMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DelTaskMenuActionPerformed
@@ -421,21 +417,24 @@ public class MainFrame extends javax.swing.JFrame {
             javax.swing.JOptionPane.showMessageDialog(this, "请选择一项任务！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-       String SelectedTaskUID = Tasks.get(SelectedTask).UID;
-       Iterator it = RunningTasks.iterator();//在正在运行任务列表中找
-       while(it.hasNext()){
-             Task tsk = (Task) it.next();
-             if(tsk.UID.equals(SelectedTaskUID)){//已经运行了同一个任务
-                 return;
-             }
-       }
-       RunningTask tsk = new RunningTask(Tasks.get(SelectedTask));//保持正在运行任务的数据独立性，不受到修改任务删除任务的影响。
-       //TODO add Thread code here:
-       
-       tsk.isRunning = true;
-       RunningTasks.add(tsk);
-       UpdateRunningTaskList();
-       tsk.UID = "aaaaa";
+        String SelectedTaskUID = Tasks.get(SelectedTask).UID;
+        Iterator it = RunningTasks.iterator();//在正在运行任务列表中找
+        while (it.hasNext()) {
+            Task tsk = (Task) it.next();
+            if (tsk.UID.equals(SelectedTaskUID)) {//已经运行了同一个任务
+                return;
+            }
+        }
+        RunningTask tsk = new RunningTask(Tasks.get(SelectedTask));//保持正在运行任务的数据独立性，不受到修改任务删除任务的影响。
+        //TODO add Thread code here:
+        TaskRunnable ttr = new TaskRunnable(tsk);//传入的是RunningTask，所以不受Task列表影响，以后修改Task也不会被影响
+        Thread trd = new Thread(ttr);
+        trd.start();
+
+        tsk.isPaused = false;
+        tsk.trd = trd;
+        RunningTasks.add(tsk);
+        UpdateRunningTaskList();
     }//GEN-LAST:event_StartMenuActionPerformed
 
     private void PauseMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PauseMenuActionPerformed
@@ -445,15 +444,16 @@ public class MainFrame extends javax.swing.JFrame {
             javax.swing.JOptionPane.showMessageDialog(this, "请选择一项任务！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if(RunningTasks.get(SelectedTask).isRunning == true)
-        {
+        if (RunningTasks.get(SelectedTask).isPaused == false) {
             //TODO add Thread code here:
-            
-            RunningTasks.get(SelectedTask).isRunning = false;
-        }else{
+            RunningTasks.get(SelectedTask).trd.suspend();
+
+            RunningTasks.get(SelectedTask).isPaused = true;
+        } else {
             //TODO add Thread code here:
-            
-            RunningTasks.get(SelectedTask).isRunning = true;
+            RunningTasks.get(SelectedTask).trd.start();
+
+            RunningTasks.get(SelectedTask).isPaused = false;
         }
         UpdateRunningTaskList();
     }//GEN-LAST:event_PauseMenuActionPerformed
@@ -466,7 +466,7 @@ public class MainFrame extends javax.swing.JFrame {
             return;
         }
         //TODO add Thread code here:
-        
+        RunningTasks.get(SelectedTask).trd.stop();
         RunningTasks.remove(SelectedTask);
         UpdateRunningTaskList();
     }//GEN-LAST:event_StopMenuActionPerformed
@@ -476,34 +476,27 @@ public class MainFrame extends javax.swing.JFrame {
         int SelectedTask = RunningTaskList.getSelectedIndex();
         if (SelectedTask >= RunningTasks.size() || SelectedTask < 0) {
             HelpTextArea.setText("");
+            LogTextArea.setText("");
             return;
         }
-        StringBuilder TaskContentStr = new StringBuilder();
         RunningTask tsk = RunningTasks.get(SelectedTask);
-        TaskContentStr.append("UID：").append(tsk.UID).append("\n");
-        TaskContentStr.append("任务名称：").append(tsk.taskname).append("\n\n");
-        if (tsk.thisindex == 0) {
-            TaskContentStr.append("THIS类型：到达时间\n日期：").append(tsk.thisstring1).append("\n时间：").append(tsk.thisstring2).append("\n\n");
-        } else {
-            TaskContentStr.append("THIS类型：到达邮件\n邮箱名：").append(tsk.thisstring1).append("\n\n");
-        }
-        if (tsk.thatindex == 0) {
-            TaskContentStr.append("THAT类型：发送邮件\n目标邮箱：").append(tsk.thisstring1).append("\n内容：").append(tsk.thatstring2).append("\n");
-        } else {
-            TaskContentStr.append("THAT类型：发送微博\n微博用户名：").append(tsk.thisstring1).append("\n内容：").append(tsk.thatstring2).append("\n");
-        }
-        HelpTextArea.setText(TaskContentStr.toString());
+        HelpTextArea.setText(getTaskContent(tsk));
+        LogTextArea.setText(tsk.taskinfo.toString());
     }//GEN-LAST:event_RunningTaskListValueChanged
 
     private void EditPopMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditPopMenuActionPerformed
         // TODO add your handling code here:
-         EditTaskMenuActionPerformed(evt);
+        EditTaskMenuActionPerformed(evt);
     }//GEN-LAST:event_EditPopMenuActionPerformed
 
     private void StartPopMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StartPopMenuActionPerformed
         // TODO add your handling code here:
-                 StartMenuActionPerformed(evt);
+        StartMenuActionPerformed(evt);
     }//GEN-LAST:event_StartPopMenuActionPerformed
+    /*下面是自定义的函数*/
+    /**
+     * 更新TaskList，用于复用
+     */
     private void UpdateTaskList() {
         int prevSelIndex = TaskList.getSelectedIndex();
         TaskList.setModel(new DefaultListModel());
@@ -520,7 +513,10 @@ public class MainFrame extends javax.swing.JFrame {
             TaskList.setSelectedIndex(dlm.size());
         }
     }
-    private void UpdateRunningTaskList(){
+    /**
+     * 更新RunningTaskList，用于复用
+     */
+    private void UpdateRunningTaskList() {
         int prevSelIndex = RunningTaskList.getSelectedIndex();
         RunningTaskList.setModel(new DefaultListModel());
         DefaultListModel dlm = (DefaultListModel) RunningTaskList.getModel();
@@ -528,8 +524,10 @@ public class MainFrame extends javax.swing.JFrame {
         Iterator it = RunningTasks.iterator();
         while (it.hasNext()) {
             RunningTask tsk = (RunningTask) it.next();
-            if(!tsk.isRunning){
+            if (tsk.isPaused) {
                 dlm.addElement(tsk.taskname + "（暂停中）");
+            } else {
+                dlm.addElement(tsk.taskname);
             }
         }
         if (prevSelIndex < dlm.size() && prevSelIndex >= 0) {
@@ -538,6 +536,9 @@ public class MainFrame extends javax.swing.JFrame {
             RunningTaskList.setSelectedIndex(dlm.size());
         }
     }
+    /**
+     * 编辑在TaskList中选中的Task，用于复用
+     */
     private void onEditTask() {
         int SelectedTask = TaskList.getSelectedIndex();
         if (SelectedTask >= Tasks.size() || SelectedTask < 0) {
@@ -562,8 +563,90 @@ public class MainFrame extends javax.swing.JFrame {
         }
         UpdateTaskList();
     }
-
     /**
+     * 用于格式化输出一个Task的内容
+     * @param tsk 需要格式化输出内容的Task
+     * @return 
+     */
+    private String getTaskContent(Task tsk)    {
+                StringBuilder TaskContentStr = new StringBuilder();
+        TaskContentStr.append("UID：").append(tsk.UID).append("\n");
+        TaskContentStr.append("任务名称：").append(tsk.taskname).append("\n\n");
+        if (tsk.thisindex == 0) {
+            TaskContentStr.append("THIS类型：到达时间\n日期：").append(tsk.thisstring1).append("\n时间：").append(tsk.thisstring2).append("\n\n");
+        } else {
+            TaskContentStr.append("THIS类型：到达邮件\n邮箱名：").append(tsk.thisstring1).append("\n\n");
+        }
+        if (tsk.thatindex == 0) {
+            TaskContentStr.append("THAT类型：发送邮件\n目标邮箱：").append(tsk.thatstring1).append("\n内容：").append(tsk.thatstring2).append("\n");
+        } else {
+            TaskContentStr.append("THAT类型：发送微博\n微博用户名：").append(tsk.thatstring1).append("\n内容：").append(tsk.thatstring2).append("\n");
+        }
+        return TaskContentStr.toString();
+    }
+    /**
+     * 用于给指定的正在运行任务加日志
+     * @param UID 目标UID
+     * @param Info 要扩展的日志
+     */
+    public void appendTaskLog(String UID,String Info){
+        Iterator it = RunningTasks.iterator();
+        while (it.hasNext()) {
+            RunningTask tsk = (RunningTask) it.next();
+            if (tsk.UID.equals(UID)) {
+                tsk.taskinfo.append(Info).append("\n");//扩展信息
+                break;
+            }
+        }
+        updateLog();//自动更新LogTextArea的内容
+    }
+    /**
+     * 用于给指定的正在运行任务设置日志
+     * @param UID 目标UID
+     * @param Info 目标日志
+     */
+    public void setTaskLog(String UID,String Info){
+        Iterator it = RunningTasks.iterator();
+        while (it.hasNext()) {
+            RunningTask tsk = (RunningTask) it.next();
+            if (tsk.UID.equals(UID)) {
+                tsk.taskinfo = new StringBuilder(Info);//重写信息
+                tsk.taskinfo.append("\n");
+                break;
+            }
+        }
+        updateLog();//自动更新LogTextArea的内容
+    }
+    private void updateLog(){
+        int SelectedTask = RunningTaskList.getSelectedIndex();
+        if (SelectedTask >= RunningTasks.size() || SelectedTask < 0) {
+            HelpTextArea.setText("");
+            LogTextArea.setText("");
+            return;
+        }
+        RunningTask tsk = RunningTasks.get(SelectedTask);
+        HelpTextArea.setText(getTaskContent(tsk));
+        LogTextArea.setText(tsk.taskinfo.toString());
+    }
+    /**
+     * 删除正在运行的任务
+     * @param UID 要删除任务的UID
+     */
+    public void RemoveRunningTask(String UID) {
+
+        Iterator it = RunningTasks.iterator();//在正在运行任务列表中找，为了对应删除Thread，只能用计数器
+        int index = 0;
+        while (it.hasNext()) {
+            RunningTask tsk = (RunningTask) it.next();
+            if (tsk.UID.equals(UID) && !tsk.trd.isAlive()) {//可能又重新开始了
+                javax.swing.JOptionPane.showMessageDialog(this, "任务完成！" + getTaskContent(tsk),"任务名称" , javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                RunningTasks.remove(tsk);
+                UpdateRunningTaskList();
+                return;
+            }
+        }
+    } 
+    /** 整个程序的主方法
      * @param args the command line arguments
      */
     public static void main(String args[]) {
@@ -598,20 +681,143 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
     }
-    private ArrayList<Task> Tasks = new ArrayList<Task>();
-    private ArrayList<RunningTask> RunningTasks = new ArrayList<RunningTask>();
-    
-    class RunningTask extends Task{
-        public RunningTask(){
+    /*下面开始定义类中类*/
+    /**
+     * 正在运行的任务，包括继承的Task，判断是否手动停止的标识符和一个Thread
+     */
+    class RunningTask extends Task {
+
+        public RunningTask() {
             super();
-            isRunning = false;
+            isPaused = true;
         }
-        public RunningTask(Task tsk){
+
+        public RunningTask(Task tsk) {
             super(tsk);
-            isRunning = false;
+            isPaused = true;
         }
-        boolean isRunning;
+        boolean isPaused;
+        Thread trd;//Task的线程
+        StringBuilder taskinfo = new StringBuilder();
     }
+    /**
+     * 用于提供一个暂缓空间，被task运行的线程在最后调用，延迟一段时间，等task完全stop后再移除task
+     */
+    class AutoRemoveRunningTaskThread extends Thread {
+
+        String UID;
+
+        public AutoRemoveRunningTaskThread(String uid) {
+            UID = uid;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Thread.sleep(1000);//休眠一秒钟然后开始删除调用这个线程的的Task线程
+            } catch (InterruptedException ex) {
+                Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            RemoveRunningTask(UID);
+        }
+    }
+    
+    /**
+     * 用于自动扫描是否有已经停止运行的线程 这种做法被抛弃，改用类中类或者静态
+     */
+    /*
+    class AutoRemoveRunningTaskThread extends Thread {
+
+        @Override
+        public void run() {
+            //要想调用原来的函数，原来函数必须是static的，所以改了不少变量定义
+            //不过MainFrame应该只同时存在一个，所以没关系
+            while (true) {
+                Iterator it = RunningTasks.iterator();//在正在运行任务列表中找
+                while (it.hasNext()) {
+                    RunningTask tsk = (RunningTask) it.next();
+                    if (!tsk.isPaused && !tsk.trd.isAlive()) {//在正在运行任务列表中找到了这个任务，没有暂停却停止了
+                        RunningTasks.remove(tsk);
+                        UpdateRunningTaskList();
+                        return;
+                    }
+                }
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+    }*/
+    /**
+     * 用于实现任务的线程
+     */
+    public class TaskRunnable implements Runnable {
+
+        Task tsk;
+
+        public TaskRunnable(Task task) {
+            tsk = task;
+        }
+
+        @Override
+        public void run() {
+            if  (tsk.thisindex == 0){//到达时间
+                Date tasktime = new Date();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-ddhh:mm");  //将时间拼到一起变成这种格式
+                try {
+                     tasktime = sdf.parse(tsk.thisstring1 + tsk.thisstring2);
+                    //if(cl.)
+                } catch (ParseException ex) {
+                    setTaskLog(tsk.UID,ex.getMessage());
+                }
+                Date nowtime = new Date();
+                if(nowtime.after(tasktime)){
+                    return;
+                }  
+                while(nowtime.before(tasktime)){
+                    long deltaminute = (tasktime.getTime()-nowtime.getTime())/(1000 * 60);  //直接先算出分钟数
+                    long day = deltaminute / (24 * 60);
+                    long hour = (deltaminute / 60) % 24;
+                    long minute = deltaminute % 60;
+                    setTaskLog(tsk.UID,"正在等待到达指定时间。\n还有：" + day + "天" + hour + "时" + minute + "分");
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException ex) {
+                        setTaskLog(tsk.UID,ex.getMessage());
+                    }
+                    nowtime = new Date();
+                }
+            }else{//收到邮件
+                
+            }
+            if (tsk.thatindex == 0) {//发邮件
+
+
+            }else{//发微博
+                Properties props = new Properties();
+                try {
+                    props.load(new FileInputStream("weiboauth.properties"));
+                } catch (Exception ex) {
+                    Logger.getLogger(TaskRunnable.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                String Access_token;
+                if ((Access_token = (String) props.get(tsk.thatstring1)) == null) {
+
+                    return;
+                }
+                try {
+                    UpdateStatus.Update(Access_token, tsk.thatstring2);
+                } catch (WeiboException ex) {
+                    Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            //RunningTasks.remove(tsk.UID);
+            new AutoRemoveRunningTaskThread(tsk.UID).start();
+        }
+    }
+   /*下面是类中的全局变量*/
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenuItem AboutMenuItem;
     private javax.swing.JMenu ControlMenu;
@@ -651,6 +857,10 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JPopupMenu TaskRightClickPopMenu;
     private javax.swing.JMenuItem jMenuItem3;
     // End of variables declaration//GEN-END:variables
-    private NewTaskDialog newTaskDialog = null;
-    private NewTaskDialog editTaskDialog = null;
+    private NewTaskDialog newTaskDialog = null;//新建任务对话框
+    private NewTaskDialog editTaskDialog = null;//编辑任务对话框
+    private ArrayList<Task> Tasks = new ArrayList<Task>();//任务列表数组
+    private static ArrayList<RunningTask> RunningTasks = new ArrayList<RunningTask>();//正在运行的任务列表数组
+    //private static ArrayList<Thread> TaskThreads = new ArrayList<Thread>();
+
 }

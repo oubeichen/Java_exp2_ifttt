@@ -8,6 +8,9 @@
   <SyntheticProperties>
     <SyntheticProperty name="formSizePolicy" type="int" value="1"/>
   </SyntheticProperties>
+  <Events>
+    <EventHandler event="keyPressed" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="formKeyPressed"/>
+  </Events>
   <AuxValues>
     <AuxValue name="FormSettings_autoResourcing" type="java.lang.Integer" value="0"/>
     <AuxValue name="FormSettings_autoSetComponentName" type="java.lang.Boolean" value="false"/>
@@ -71,8 +74,8 @@
               </Group>
               <EmptySpace min="-2" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="ThisPanel" alignment="0" pref="230" max="32767" attributes="0"/>
-                  <Component id="ThatPanel" alignment="1" pref="230" max="32767" attributes="0"/>
+                  <Component id="ThisPanel" alignment="0" pref="251" max="32767" attributes="0"/>
+                  <Component id="ThatPanel" alignment="1" pref="251" max="32767" attributes="0"/>
                   <Group type="102" attributes="0">
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Component id="IfLabel" min="-2" max="-2" attributes="0"/>
@@ -220,6 +223,9 @@
               </Properties>
             </Component>
             <Component class="javax.swing.JTextField" name="ThisDateText">
+              <Events>
+                <EventHandler event="keyPressed" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="ThisDateTextKeyPressed"/>
+              </Events>
               <AuxValues>
                 <AuxValue name="JavaCodeGenerator_InitCodePre" type="java.lang.String" value="DateChooser dateChooser1 = DateChooser.getInstance(&quot;yyyy-MM-dd&quot;);&#xa;dateChooser1.register(ThisDateText);"/>
               </AuxValues>
@@ -231,6 +237,9 @@
                 </Property>
                 <Property name="text" type="java.lang.String" value="12:00"/>
               </Properties>
+              <Events>
+                <EventHandler event="keyPressed" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="ThisTimeTextKeyPressed"/>
+              </Events>
             </Component>
           </SubComponents>
         </Container>
@@ -276,6 +285,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="a19870825"/>
               </Properties>
+              <Events>
+                <EventHandler event="keyReleased" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="ThisPassTextKeyReleased"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JLabel" name="ThisAccLabel">
               <Properties>
@@ -291,6 +303,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="oubeichen@gmail.com"/>
               </Properties>
+              <Events>
+                <EventHandler event="keyPressed" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="ThisAccTextKeyPressed"/>
+              </Events>
               <AuxValues>
                 <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new javax.swing.JFormattedTextField(new EmailFormatter())"/>
               </AuxValues>
@@ -336,7 +351,7 @@
                   <Component id="ThatComboBox" min="-2" pref="31" max="-2" attributes="0"/>
                   <EmptySpace type="unrelated" max="-2" attributes="0"/>
                   <Component id="ThatMailPanel" min="-2" max="-2" attributes="0"/>
-                  <EmptySpace pref="25" max="32767" attributes="0"/>
+                  <EmptySpace pref="46" max="32767" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
@@ -408,6 +423,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="diamondwave@qq.com"/>
               </Properties>
+              <Events>
+                <EventHandler event="keyPressed" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="ThatAccTextKeyPressed"/>
+              </Events>
               <AuxValues>
                 <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="new javax.swing.JFormattedTextField(new EmailFormatter())"/>
               </AuxValues>
@@ -462,6 +480,9 @@
       </Properties>
     </Component>
     <Component class="javax.swing.JTextField" name="TaskNameText">
+      <Events>
+        <EventHandler event="keyPressed" listener="java.awt.event.KeyListener" parameters="java.awt.event.KeyEvent" handler="TaskNameTextKeyPressed"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JButton" name="CancelButton">
       <Properties>

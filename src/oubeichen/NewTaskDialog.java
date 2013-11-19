@@ -4,14 +4,28 @@
  */
 package oubeichen;
 
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.text.DefaultFormatterFactory;
 import javax.swing.text.MaskFormatter;
+import weibo4j.Oauth;
+import weibo4j.examples.oauth2.Log;
+import weibo4j.model.WeiboException;
+import weibo4j.util.BareBonesBrowserLaunch;
 
 /**
  *
@@ -22,7 +36,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
     /**
      * Creates new form NewTaskDialog
      */
-    public NewTaskDialog(java.awt.Frame parent, boolean modal , String title) {
+    public NewTaskDialog(java.awt.Frame parent, boolean modal, String title) {
         super(parent, modal);
         initComponents();
         this.setLocationRelativeTo(null);
@@ -33,8 +47,8 @@ public class NewTaskDialog extends javax.swing.JDialog {
         ThisTimePanel.setVisible(true);
         ThisMailPanel.setVisible(false);
         Calendar initdate = Calendar.getInstance();
-	initdate.setTime(new Date());//初始化为今天
-        ThisDateText.setText(initdate.get(Calendar.YEAR) + "-" + initdate.get(Calendar.MONTH) + "-" + initdate.get(Calendar.DAY_OF_MONTH));
+        initdate.setTime(new Date());//初始化为今天
+        ThisDateText.setText(initdate.get(Calendar.YEAR) + "-" + (initdate.get(Calendar.MONTH) + 1) + "-" + initdate.get(Calendar.DAY_OF_MONTH));
         TaskNameText.setText("任务" + tasknum + "(到达时间-发邮件)");
     }
 
@@ -77,6 +91,11 @@ public class NewTaskDialog extends javax.swing.JDialog {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setResizable(false);
+        addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                formKeyPressed(evt);
+            }
+        });
 
         TitleLabel.setFont(new java.awt.Font("宋体", 1, 18)); // NOI18N
         TitleLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -102,6 +121,11 @@ public class NewTaskDialog extends javax.swing.JDialog {
 
         DateChooser dateChooser1 = DateChooser.getInstance("yyyy-MM-dd");
         dateChooser1.register(ThisDateText);
+        ThisDateText.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                ThisDateTextKeyPressed(evt);
+            }
+        });
 
         try {
             ThisTimeText.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(new TimeFormatter("##:##")));
@@ -109,6 +133,11 @@ public class NewTaskDialog extends javax.swing.JDialog {
             ex.printStackTrace();
         }
         ThisTimeText.setText("12:00");
+        ThisTimeText.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                ThisTimeTextKeyPressed(evt);
+            }
+        });
 
         javax.swing.GroupLayout ThisTimePanelLayout = new javax.swing.GroupLayout(ThisTimePanel);
         ThisTimePanel.setLayout(ThisTimePanelLayout);
@@ -139,12 +168,22 @@ public class NewTaskDialog extends javax.swing.JDialog {
         );
 
         ThisPassText.setText("a19870825");
+        ThisPassText.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                ThisPassTextKeyReleased(evt);
+            }
+        });
 
         ThisAccLabel.setText("邮箱账号：");
 
         ThisPassLabel.setText("密码：");
 
         ThisAccText.setText("oubeichen@gmail.com");
+        ThisAccText.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                ThisAccTextKeyPressed(evt);
+            }
+        });
 
         javax.swing.GroupLayout ThisMailPanelLayout = new javax.swing.GroupLayout(ThisMailPanel);
         ThisMailPanel.setLayout(ThisMailPanelLayout);
@@ -214,6 +253,11 @@ public class NewTaskDialog extends javax.swing.JDialog {
         ThatAccLabel.setText("目标邮箱：");
 
         ThatAccText.setText("diamondwave@qq.com");
+        ThatAccText.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                ThatAccTextKeyPressed(evt);
+            }
+        });
 
         ThatContentScroll.setPreferredSize(new java.awt.Dimension(21, 21));
 
@@ -275,7 +319,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
                 .addComponent(ThatComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(ThatMailPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(25, Short.MAX_VALUE))
+                .addContainerGap(46, Short.MAX_VALUE))
         );
 
         IfLabel.setFont(new java.awt.Font("宋体", 1, 14)); // NOI18N
@@ -283,6 +327,12 @@ public class NewTaskDialog extends javax.swing.JDialog {
 
         ThenLabel.setFont(new java.awt.Font("宋体", 1, 14)); // NOI18N
         ThenLabel.setText("Then");
+
+        TaskNameText.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                TaskNameTextKeyPressed(evt);
+            }
+        });
 
         CancelButton.setFont(new java.awt.Font("宋体", 0, 14)); // NOI18N
         CancelButton.setText("取消");
@@ -342,8 +392,8 @@ public class NewTaskDialog extends javax.swing.JDialog {
                     .addComponent(TaskNameLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 21, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(ThisPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 230, Short.MAX_VALUE)
-                    .addComponent(ThatPanel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 230, Short.MAX_VALUE)
+                    .addComponent(ThisPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 251, Short.MAX_VALUE)
+                    .addComponent(ThatPanel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 251, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(IfLabel)
@@ -375,28 +425,21 @@ public class NewTaskDialog extends javax.swing.JDialog {
         if (title.contains("(") && title.substring(title.lastIndexOf("(")).contains(")")
                 && title.substring(title.lastIndexOf("("), title.lastIndexOf(")")).contains("-"))//正则表达式在有中文的字符串中不正常，不得已放弃
         {
-            title = title.substring(0,title.lastIndexOf("(")) + "(" + Tasktype + title.substring(title.lastIndexOf("-"));//字符短，不考虑性能
+            title = title.substring(0, title.lastIndexOf("(")) + "(" + Tasktype + title.substring(title.lastIndexOf("-"));//字符短，不考虑性能
             TaskNameText.setText(title);
         }
     }//GEN-LAST:event_ThisComboBoxItemStateChanged
-
+    
     private void OKButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OKButtonActionPerformed
         // TODO add your handling code here:
-        if(checkInput() == false)
-        {
-            javax.swing.JOptionPane.showMessageDialog(this, "请正确填写所有的项目！", "输入错误", javax.swing.JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        OK = true;//让调用的函数知道选择了OK。
-        tasknum++;
-        dispose();
+        onOK();
     }//GEN-LAST:event_OKButtonActionPerformed
-
+    
     private void CancelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CancelButtonActionPerformed
         // TODO add your handling code here:
         dispose();
     }//GEN-LAST:event_CancelButtonActionPerformed
-
+    
     private void ThatComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_ThatComboBoxItemStateChanged
         // TODO add your handling code here:
         String Tasktype;//用于设置名称
@@ -404,21 +447,70 @@ public class NewTaskDialog extends javax.swing.JDialog {
             ThatAccLabel.setText("目标邮箱：");
             ThatAccText.setFormatterFactory(new DefaultFormatterFactory(new EmailFormatter()));
             ThatAccText.setText("diamondwave@qq.com");
-                        Tasktype = "发邮件";
+            Tasktype = "发邮件";
         } else {
             ThatAccLabel.setText("目标微博：");
             ThatAccText.setFormatterFactory(null);
-            ThatAccText.setText("bakerstreetkid");
+            ThatAccText.setText("weibo1");
             Tasktype = "发微博";
         }
-                String title = TaskNameText.getText();//自动修改标题
+        String title = TaskNameText.getText();//自动修改标题
         if (title.contains("(") && title.substring(title.lastIndexOf("(")).contains(")")
                 && title.substring(title.lastIndexOf("("), title.lastIndexOf(")")).contains("-"))//正则表达式在有中文的字符串中不正常，不得已放弃
         {
-            title = title.substring(0,title.lastIndexOf("-")) + "-" + Tasktype + title.substring(title.lastIndexOf(")"));//字符短，不考虑性能
+            title = title.substring(0, title.lastIndexOf("-")) + "-" + Tasktype + title.substring(title.lastIndexOf(")"));//字符短，不考虑性能
             TaskNameText.setText(title);
         }
     }//GEN-LAST:event_ThatComboBoxItemStateChanged
+    
+    private void TaskNameTextKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_TaskNameTextKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_TaskNameTextKeyPressed
+    
+    private void ThisDateTextKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ThisDateTextKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_ThisDateTextKeyPressed
+    
+    private void ThisTimeTextKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ThisTimeTextKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_ThisTimeTextKeyPressed
+    
+    private void ThisAccTextKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ThisAccTextKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_ThisAccTextKeyPressed
+    
+    private void ThisPassTextKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ThisPassTextKeyReleased
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_ThisPassTextKeyReleased
+    
+    private void ThatAccTextKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_ThatAccTextKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_ThatAccTextKeyPressed
+    
+    private void formKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_formKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyChar() == KeyEvent.VK_ENTER) {
+            onOK();
+        }
+    }//GEN-LAST:event_formKeyPressed
 
     /**
      * @param args the command line arguments
@@ -451,7 +543,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                NewTaskDialog dialog = new NewTaskDialog(new javax.swing.JFrame(), true ,"title");
+                NewTaskDialog dialog = new NewTaskDialog(new javax.swing.JFrame(), true, "title");
                 dialog.addWindowListener(new java.awt.event.WindowAdapter() {
                     @Override
                     public void windowClosing(java.awt.event.WindowEvent e) {
@@ -462,9 +554,9 @@ public class NewTaskDialog extends javax.swing.JDialog {
             }
         });
     }
-
+    
     public class EmailFormatter extends AbstractFormatter {
-
+        
         @Override
         public Object stringToValue(String string) throws ParseException {
             Matcher matcher = regexp.matcher(string);
@@ -474,48 +566,47 @@ public class NewTaskDialog extends javax.swing.JDialog {
             //return "@";//邮箱格式错误则初始化为只有一个@
             throw new ParseException("Not an email", 0);
         }
-
+        
         @Override
         public String valueToString(Object value) throws ParseException {
             return (String) value;
         }
         final private Pattern regexp = Pattern.compile("\\w+(\\.\\w+)*@\\w+(\\.\\w+)+");//判断是否为邮箱
     }
-
+    
     public class TimeFormatter extends MaskFormatter {
-
+        
         private TimeFormatter(String string) throws ParseException {
             super("##:##");
         }
+        
         @Override
         public Object stringToValue(String string) throws ParseException {
-            String newstring = (String)super.stringToValue(string);
+            String newstring = (String) super.stringToValue(string);
             /*int hh = Integer.parseInt(newstring.split(":")[0]),mm = Integer.parseInt(newstring.split(":")[1]);
-            if(hh >= 0 && hh <=23 && mm >= 0 && mm <= 59)//小时0~23，分钟0~59
-            {
-                return newstring;
-            }*/
+             if(hh >= 0 && hh <=23 && mm >= 0 && mm <= 59)//小时0~23，分钟0~59
+             {
+             return newstring;
+             }*/
             Pattern regexp = Pattern.compile(("^([0-1][0-9]|[2][0-3]):([0-5][0-9])$"));
             Matcher matcher = regexp.matcher(newstring);
-            if(matcher.matches())
-            {
+            if (matcher.matches()) {
                 return newstring;
             }
             throw new ParseException("Not an valid time", 0);
             //return "12:00";
         }
     }
-    
+
     //settask函数，用于初始化赋值
-    public void settask(Task task){
+    public void settask(Task task) {
         tsk = task;
         TaskNameText.setText(tsk.taskname);
         ThisComboBox.setSelectedIndex(tsk.thisindex);
-        if(ThisComboBox.getSelectedIndex() == 0){//时间
+        if (ThisComboBox.getSelectedIndex() == 0) {//时间
             ThisDateText.setText(tsk.thisstring1);
             ThisTimeText.setText(tsk.thisstring2);
-        }
-        else{//邮箱，若扩展则将else改成其他
+        } else {//邮箱，若扩展则将else改成其他
             ThisAccText.setText(tsk.thisstring1);
             ThisPassText.setText(tsk.thisstring2);
         }
@@ -523,77 +614,134 @@ public class NewTaskDialog extends javax.swing.JDialog {
         ThatAccText.setText(tsk.thatstring1);//邮箱、微博均一样
         ThatContentText.setText(tsk.thatstring2);//邮箱微博均一样
     }
-    
+
     //gettask系列函数，用于主窗口取出修改后的结果
-    public Task gettask(){
-        tsk.taskname = TaskNameText.getText();
-        tsk.thisindex =  ThisComboBox.getSelectedIndex();
-        if(ThisComboBox.getSelectedIndex() == 0){//时间
-            tsk.thisstring1 = ThisDateText.getText();
-            tsk.thisstring2 = ThisTimeText.getText();
-        }
-        else{//邮箱，若扩展则将else改成其他
-            tsk.thisstring1 = ThisAccText.getText();
-            tsk.thisstring2 = String.valueOf(ThisPassText.getPassword());//返回的是char
-        }
-        tsk.thatindex = ThatComboBox.getSelectedIndex();
-        tsk.thatstring1 = ThatAccText.getText();//邮箱、微博均一样
-        tsk.thatstring2 = ThatContentText.getText();//邮箱微博均一样
+    public Task gettask() {
         return tsk;
     }
-    
+
     //检查输入
-    private boolean checkInput()
-    {
+    private boolean checkInput() {
         String temp;
         Matcher matcher;
         Pattern regexp;
-        if("".equals(TaskNameText.getText())){//标题未输入
+        if ("".equals(TaskNameText.getText())) {//标题未输入
             return false;
         }
-        if(ThisComboBox.getSelectedIndex() == 0){
+        if (ThisComboBox.getSelectedIndex() == 0) {
             temp = ThisDateText.getText();//检查日期
             regexp = Pattern.compile(("^([0-9]{4})-([0][1-9]|[1][0-2])-([0][1-9]|[1-2][0-9]|[3][0-1])$"));
             matcher = regexp.matcher(temp);
-            if(!matcher.matches()){
+            if (!matcher.matches()) {
                 javax.swing.JOptionPane.showMessageDialog(this, "日期！", "输入错误", javax.swing.JOptionPane.ERROR_MESSAGE);
                 return false;
             }
             temp = ThisTimeText.getText();//检查时间
             regexp = Pattern.compile(("^([0-1][0-9]|[2][0-3]):([0-5][0-9])$"));
             matcher = regexp.matcher(temp);
-            if(!matcher.matches()){
+            if (!matcher.matches()) {
                 return false;
             }
-        }else{
-            temp =  ThisAccText.getText();//检查邮箱
+        } else {
+            temp = ThisAccText.getText();//检查邮箱
             regexp = Pattern.compile(("\\w+(\\.\\w+)*@\\w+(\\.\\w+)+"));
             matcher = regexp.matcher(temp);
-            if(!matcher.matches()){
+            if (!matcher.matches()) {
                 return false;
             }
-            if("".equals(String.valueOf(ThisPassText.getPassword()))){//返回的是char
+            if ("".equals(String.valueOf(ThisPassText.getPassword()))) {//返回的是char
                 return false;
             }
         }
-        if(ThatComboBox.getSelectedIndex() == 0)//邮箱
+        if (ThatComboBox.getSelectedIndex() == 0)//邮箱
         {
-            temp =  ThatAccText.getText();//检查邮箱
+            temp = ThatAccText.getText();//检查邮箱
             regexp = Pattern.compile(("\\w+(\\.\\w+)*@\\w+(\\.\\w+)+"));
             matcher = regexp.matcher(temp);
-            if(!matcher.matches()){
+            if (!matcher.matches()) {
                 return false;
             }
         }
         temp = ThatAccText.getText();
-        if("".equals(temp)){//再次判断是否为空
+        if ("".equals(temp)) {//再次判断是否为空
             return false;
         }
         temp = ThatContentText.getText();//邮箱微博均一样
-        if("".equals(temp)){
+        if ("".equals(temp)) {
             return false;
         }
         return true;
+    }
+    
+    private void onOK() {
+        if (checkInput() == false) {
+            javax.swing.JOptionPane.showMessageDialog(this, "请正确填写所有的项目！", "输入错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        tsk.taskname = TaskNameText.getText();
+        tsk.thisindex = ThisComboBox.getSelectedIndex();
+        if (ThisComboBox.getSelectedIndex() == 0) {//时间
+            tsk.thisstring1 = ThisDateText.getText();
+            tsk.thisstring2 = ThisTimeText.getText();
+        } else {//邮箱，若扩展则将else改成其他
+            tsk.thisstring1 = ThisAccText.getText();
+            tsk.thisstring2 = String.valueOf(ThisPassText.getPassword());//返回的是char
+        }
+        tsk.thatindex = ThatComboBox.getSelectedIndex();
+        tsk.thatstring1 = ThatAccText.getText();//邮箱、微博均一样
+        tsk.thatstring2 = ThatContentText.getText();//邮箱微博均一样
+        //开始判断微博、授权微博
+        if(tsk.thatindex == 1)
+        {
+            setWeibo();
+        }
+        
+        OK = true;//让调用的函数知道选择了OK。
+        tasknum++;
+        dispose();
+    }
+    public void setWeibo()
+    {
+                Properties props = new Properties();
+        try {
+            props.load(new FileInputStream("weiboauth.properties"));
+        } catch (Exception ex) {
+            Logger.getLogger(NewTaskDialog.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        String Access_token;
+        if (props.getProperty(tsk.thatstring1) == null) {
+            Oauth oauth = new Oauth();
+            try {
+                BareBonesBrowserLaunch.openURL(oauth.authorize("code", "", ""));
+            } catch (WeiboException e) {
+            }
+            if (javax.swing.JOptionPane.showConfirmDialog(this, "你的微博尚未授权\n请在弹出的网页中登陆、授权，等到网页中显示成功后再点击确认", "操作确认", javax.swing.JOptionPane.OK_CANCEL_OPTION) == javax.swing.JOptionPane.CANCEL_OPTION) {
+                return;
+            }
+            String code = Getpage.getPage("http://oubeichen.com/oauth.txt");
+            code = code.substring(0, code.length() - 2);//去掉最后一个换行
+            try {
+                Access_token = oauth.getAccessTokenByCode(code).toString().split("accessToken=")[1].split(",")[0];
+                System.out.print(code);
+            } catch (WeiboException e) {
+                javax.swing.JOptionPane.showMessageDialog(this, "授权失败，请检查网络！", "授权失败", javax.swing.JOptionPane.ERROR_MESSAGE);
+                if (401 == e.getStatusCode()) {
+                    Log.logInfo("Unable to get the access token.");
+                } else {
+                    e.printStackTrace();
+                }
+                return;
+            }
+            
+            props.setProperty(tsk.thatstring1, Access_token);
+            try {
+                props.store(new FileOutputStream("weiboauth.properties"), "");
+            } catch (IOException ex) {
+                javax.swing.JOptionPane.showMessageDialog(this, "写入weiboauth.properties失败！", "文件读写失败", javax.swing.JOptionPane.ERROR_MESSAGE);
+                Logger.getLogger(NewTaskDialog.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
     }
     
     public boolean OK = false;
