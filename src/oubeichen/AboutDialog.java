@@ -5,7 +5,7 @@
 package oubeichen;
 
 /**
- *
+ * 关于窗口，就是啥也没有啦
  * @author oubeichen
  */
 public class AboutDialog extends javax.swing.JDialog {

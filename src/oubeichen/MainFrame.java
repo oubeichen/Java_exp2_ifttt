@@ -4,7 +4,10 @@
  */
 package oubeichen;
 
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,14 +16,24 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.SimpleEmail;
 import org.apache.commons.net.pop3.POP3MessageInfo;
 import org.apache.commons.net.pop3.POP3SClient;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.SAXReader;
+import org.dom4j.io.XMLWriter;
 
 /**
- *  主窗口类
+ * 主窗口类
+ *
  * @author oubeichen
  */
 public class MainFrame extends javax.swing.JFrame {
@@ -44,8 +57,9 @@ public class MainFrame extends javax.swing.JFrame {
     private void initComponents() {
 
         TaskRightClickPopMenu = new javax.swing.JPopupMenu();
-        EditPopMenu = new javax.swing.JMenuItem();
         StartPopMenu = new javax.swing.JMenuItem();
+        EditPopMenu = new javax.swing.JMenuItem();
+        DelPopMenu = new javax.swing.JMenuItem();
         RunningTaskRightClickPopMenu = new javax.swing.JPopupMenu();
         PausePopMenu = new javax.swing.JMenuItem();
         StopPopMenu = new javax.swing.JMenuItem();
@@ -71,7 +85,7 @@ public class MainFrame extends javax.swing.JFrame {
         FileMenu = new javax.swing.JMenu();
         LoadMenu = new javax.swing.JMenuItem();
         SaveMenu = new javax.swing.JMenuItem();
-        jMenuItem3 = new javax.swing.JMenuItem();
+        ExitMenu = new javax.swing.JMenuItem();
         TaskMenu = new javax.swing.JMenu();
         NewTaskMenu = new javax.swing.JMenuItem();
         EditTaskMenu = new javax.swing.JMenuItem();
@@ -84,6 +98,14 @@ public class MainFrame extends javax.swing.JFrame {
         HelpMenuItem = new javax.swing.JMenuItem();
         AboutMenuItem = new javax.swing.JMenuItem();
 
+        StartPopMenu.setText("开始任务");
+        StartPopMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                StartPopMenuActionPerformed(evt);
+            }
+        });
+        TaskRightClickPopMenu.add(StartPopMenu);
+
         EditPopMenu.setText("编辑任务");
         EditPopMenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -92,13 +114,13 @@ public class MainFrame extends javax.swing.JFrame {
         });
         TaskRightClickPopMenu.add(EditPopMenu);
 
-        StartPopMenu.setText("开始任务");
-        StartPopMenu.addActionListener(new java.awt.event.ActionListener() {
+        DelPopMenu.setText("jMenuItem1");
+        DelPopMenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                StartPopMenuActionPerformed(evt);
+                DelPopMenuActionPerformed(evt);
             }
         });
-        TaskRightClickPopMenu.add(StartPopMenu);
+        TaskRightClickPopMenu.add(DelPopMenu);
 
         PausePopMenu.setText("暂停/恢复任务");
         PausePopMenu.addActionListener(new java.awt.event.ActionListener() {
@@ -273,9 +295,14 @@ public class MainFrame extends javax.swing.JFrame {
         });
         FileMenu.add(SaveMenu);
 
-        jMenuItem3.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0));
-        jMenuItem3.setText("退出");
-        FileMenu.add(jMenuItem3);
+        ExitMenu.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0));
+        ExitMenu.setText("退出");
+        ExitMenu.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ExitMenuActionPerformed(evt);
+            }
+        });
+        FileMenu.add(ExitMenu);
 
         MenuBar.add(FileMenu);
 
@@ -377,7 +404,8 @@ public class MainFrame extends javax.swing.JFrame {
     /*下面是监听事件的函数*/
     /**
      * 新建任务，弹出新建任务窗口
-     * @param evt 
+     *
+     * @param evt
      */
     private void NewTaskMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_NewTaskMenuActionPerformed
         // TODO add your handling code here:
@@ -403,19 +431,20 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_NewTaskMenuActionPerformed
     /**
      * 弹出关于对话框
-     * @param evt 
+     *
+     * @param evt
      */
     private void AboutMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AboutMenuItemActionPerformed
         // TODO add your handling code here:
-        if(aboutDialog == null)
-        {
-            aboutDialog = new AboutDialog(this,true);
+        if (aboutDialog == null) {
+            aboutDialog = new AboutDialog(this, true);
         }
         aboutDialog.setVisible(true);
     }//GEN-LAST:event_AboutMenuItemActionPerformed
     /**
      * 编辑菜单
-     * @param evt 
+     *
+     * @param evt
      */
     private void EditTaskMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_EditTaskMenuActionPerformed
         // TODO add your handling code here:
@@ -423,7 +452,8 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_EditTaskMenuActionPerformed
     /**
      * 在TaskList中选择不同Task，显示不同的信息
-     * @param evt 
+     *
+     * @param evt
      */
     private void TaskListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_TaskListValueChanged
         // TODO add your handling code here:
@@ -566,14 +596,87 @@ public class MainFrame extends javax.swing.JFrame {
         // TODO add your handling code here:
         PauseMenuActionPerformed(evt);
     }//GEN-LAST:event_PausePopMenuActionPerformed
-
+    /**
+     * 读取XML 并写入 Tasks
+     */
     private void LoadMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LoadMenuActionPerformed
         // TODO add your handling code here:
+        int option = javax.swing.JOptionPane.showConfirmDialog(this, "您是否确定要读取tasks.xml？\n当前创建的任务将会被清除！", "读取", javax.swing.JOptionPane.YES_NO_OPTION);
+        if (option == javax.swing.JOptionPane.CANCEL_OPTION) {
+            return;
+        }
+        SAXReader reader = new SAXReader();
+        Document document;
+        try {
+            document = reader.read(new File("tasks.xml"));//读文件
+        } catch (DocumentException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this, "读取tasks.xml出错！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        Tasks.clear();//清空Task
+        Element root = document.getRootElement();
+        Iterator xmlit = root.elementIterator();
+        while (xmlit.hasNext()) {
+            Element taskElm = (Element) xmlit.next();
+            Task tsk = new Task();
+            tsk.UID = taskElm.elementText("UID");
+            tsk.taskname = taskElm.elementText("taskname");
+            tsk.thisindex = Integer.parseInt(taskElm.elementText("thisindex"));
+            tsk.thisstring1 = taskElm.elementText("thisstring1");
+            tsk.thisstring2 = taskElm.elementText("thisstring2");
+            tsk.thatindex = Integer.parseInt(taskElm.elementText("thatindex"));
+            tsk.thatstring1 = taskElm.elementText("thatstring1");
+            tsk.thatstring2 = taskElm.elementText("thatstring2");
+            Tasks.add(tsk);
+        }
+        UpdateTaskList();
     }//GEN-LAST:event_LoadMenuActionPerformed
-
+    /**
+     * 将Tasks 写入XML
+     *
+     * @param evt
+     */
     private void SaveMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveMenuActionPerformed
         // TODO add your handling code here:
+        Document document = DocumentHelper.createDocument();
+        Element root = document.addElement("tasks");// 创建根节点
+        Iterator taskit = Tasks.iterator();
+        while (taskit.hasNext()) {//写入所有Tasks
+            Task tsk = (Task) taskit.next();
+            Element taskElm = root.addElement("task");
+            taskElm.addElement("UID").addText(tsk.UID);
+            taskElm.addElement("taskname").addText(tsk.taskname);
+            taskElm.addElement("thisindex").addText(String.valueOf(tsk.thisindex));
+            taskElm.addElement("thisstring1").addText(tsk.thisstring1);
+            taskElm.addElement("thisstring2").addText(tsk.thisstring2);
+            taskElm.addElement("thatindex").addText(String.valueOf(tsk.thatindex));
+            taskElm.addElement("thatstring1").addText(tsk.thatstring1);
+            taskElm.addElement("thatstring2").addText(tsk.thatstring2);
+        }
+        OutputFormat format = OutputFormat.createPrettyPrint();
+        format.setEncoding("UTF-8");    // 指定XML编码        
+        XMLWriter writer;
+        try {
+            writer = new XMLWriter(new FileWriter("tasks.xml"), format);
+            writer.write(document);
+            writer.close();
+        } catch (IOException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this, "写入tasks.xml出错！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_SaveMenuActionPerformed
+
+    private void ExitMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ExitMenuActionPerformed
+        // TODO add your handling code here:
+        int option = javax.swing.JOptionPane.showConfirmDialog(this, "您是否确定要退出？", "退出", javax.swing.JOptionPane.YES_NO_OPTION);
+        if (option == javax.swing.JOptionPane.YES_OPTION) {
+            System.exit(0);
+        }
+    }//GEN-LAST:event_ExitMenuActionPerformed
+
+    private void DelPopMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DelPopMenuActionPerformed
+        // TODO add your handling code here:
+        DelTaskMenuActionPerformed(evt);
+    }//GEN-LAST:event_DelPopMenuActionPerformed
     /*下面是自定义的函数*/
 
     /**
@@ -670,6 +773,7 @@ public class MainFrame extends javax.swing.JFrame {
         }
         return TaskContentStr.toString();
     }
+
     /**
      * 用于刷新任务日志输出，也就是LogTextArea
      */
@@ -690,11 +794,11 @@ public class MainFrame extends javax.swing.JFrame {
      *
      * @param trd_to_remove 要删除的正在运行任务
      */
-    private void RemoveRunningTask(RunningTask trd_to_remove , String TaskInfo) {
-                //根据不同code显示不同的信息
-                javax.swing.JOptionPane.showMessageDialog(this, getTaskContent(trd_to_remove) + "任务运行情况：\n" + trd_to_remove.tasklog.toString() , TaskInfo , javax.swing.JOptionPane.INFORMATION_MESSAGE);
-                RunningTasks.remove(trd_to_remove);
-                UpdateRunningTaskList();
+    private void RemoveRunningTask(RunningTask trd_to_remove, String TaskInfo) {
+        //根据不同code显示不同的信息
+        javax.swing.JOptionPane.showMessageDialog(this, getTaskContent(trd_to_remove) + "任务运行情况：\n" + trd_to_remove.tasklog.toString(), TaskInfo, javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        RunningTasks.remove(trd_to_remove);
+        UpdateRunningTaskList();
     }
 
     /**
@@ -734,16 +838,17 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
     }
-    
-    /*下面开始定义类中类*/
 
+    /*下面开始定义类中类*/
     /**
      * 正在运行的任务，包括继承的Task，判断是否手动停止的标识符和一个Thread
      */
     class RunningTask extends Task {
+
         private final static int SUCCESS = 0;
         private final static int TIMEOUT = 1;
         private final static int RUNTIMEERROR = 10;
+
         public RunningTask() {
             super();
             isPaused = true;
@@ -824,20 +929,20 @@ public class MainFrame extends javax.swing.JFrame {
                 }
             }
             if (thatindex == 0) {//发邮件
-                 SimpleEmail email = new SimpleEmail();
-                 if (thisindex == 0) {//定时发送，所以只能用默认邮箱发送
+                SimpleEmail email = new SimpleEmail();
+                if (thisindex == 0) {//定时发送，所以只能用默认邮箱发送
                     Properties props = new Properties();
-                    String user,pass;
+                    String user, pass;
                     try {
                         props.load(new FileInputStream("defaultmail.properties"));
                         if ((user = (String) props.get("user")) == null
-                                || (pass = (String)props.get("pass")) == null) {
+                                || (pass = (String) props.get("pass")) == null) {
                             appendTaskLog("请设置默认邮箱！");
                             new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
                             return;
                         }
                         email.setHostName("smtp." + user.split("@")[1]);//邮件服务器 默认 为smtp. + domain
-                        email.setAuthentication(user,pass);//smtp认证的用户名和密码  
+                        email.setAuthentication(user, pass);//smtp认证的用户名和密码  
                         email.setSSLOnConnect(true);
                         email.addTo(thatstring1, "JAVA EXP2 RECEIVER");//收信者  
                         email.setFrom(user, "JAVA EXP2 SENDER");//发信者  
@@ -850,7 +955,7 @@ public class MainFrame extends javax.swing.JFrame {
                         new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
                         return;
                     }
-                }else{//定时发送，所以只能用默认邮箱发送
+                } else {//定时发送，所以只能用默认邮箱发送
                     try {
                         email.setHostName("smtp." + thisstring1.split("@")[1]);//邮件服务器 默认 为smtp. + domain
                         email.setAuthentication(thisstring1, thisstring2);//smtp认证的用户名和密码  
@@ -889,6 +994,7 @@ public class MainFrame extends javax.swing.JFrame {
 
         /**
          * 用于给正在运行任务加日志 外部也可调用
+         *
          * @param Info 要扩展的日志
          */
         public void appendTaskLog(String Info) {
@@ -898,6 +1004,7 @@ public class MainFrame extends javax.swing.JFrame {
 
         /**
          * 用于给正在运行任务设置日志
+         *
          * @param Info 目标日志
          */
         private void setTaskLog(String Info) {
@@ -981,7 +1088,7 @@ public class MainFrame extends javax.swing.JFrame {
             }
         }
     }
-    */
+*/
     /**
      * 用于实现任务的线程
      */
@@ -990,9 +1097,11 @@ public class MainFrame extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenuItem AboutMenuItem;
     private javax.swing.JMenu ControlMenu;
+    private javax.swing.JMenuItem DelPopMenu;
     private javax.swing.JMenuItem DelTaskMenu;
     private javax.swing.JMenuItem EditPopMenu;
     private javax.swing.JMenuItem EditTaskMenu;
+    private javax.swing.JMenuItem ExitMenu;
     private javax.swing.JMenu FileMenu;
     private javax.swing.JMenu HelpMenu;
     private javax.swing.JMenuItem HelpMenuItem;
@@ -1027,7 +1136,6 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JScrollPane TaskListScroll;
     private javax.swing.JMenu TaskMenu;
     private javax.swing.JPopupMenu TaskRightClickPopMenu;
-    private javax.swing.JMenuItem jMenuItem3;
     // End of variables declaration//GEN-END:variables
     private NewTaskDialog newTaskDialog = null;//新建任务对话框
     private NewTaskDialog editTaskDialog = null;//编辑任务对话框
