@@ -6,7 +6,7 @@ package oubeichen;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -16,8 +16,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.SimpleEmail;
@@ -114,7 +112,7 @@ public class MainFrame extends javax.swing.JFrame {
         });
         TaskRightClickPopMenu.add(EditPopMenu);
 
-        DelPopMenu.setText("jMenuItem1");
+        DelPopMenu.setText("删除任务");
         DelPopMenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 DelPopMenuActionPerformed(evt);
@@ -521,23 +519,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void PauseMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PauseMenuActionPerformed
         // TODO add your handling code here:
-        int SelectedTask = RunningTaskList.getSelectedIndex();
-        if (SelectedTask >= RunningTasks.size() || SelectedTask < 0) {
-            javax.swing.JOptionPane.showMessageDialog(this, "请选择一项任务！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (RunningTasks.get(SelectedTask).isPaused == false) {
-            //TODO add Thread code here:
-            RunningTasks.get(SelectedTask).suspend();
-
-            RunningTasks.get(SelectedTask).isPaused = true;
-        } else {
-            //TODO add Thread code here:
-            RunningTasks.get(SelectedTask).resume();
-
-            RunningTasks.get(SelectedTask).isPaused = false;
-        }
-        UpdateRunningTaskList();
+        onPauseRunningTask();
     }//GEN-LAST:event_PauseMenuActionPerformed
 
     private void StopMenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_StopMenuActionPerformed
@@ -581,6 +563,9 @@ public class MainFrame extends javax.swing.JFrame {
         RunningTaskList.setSelectedIndex(RunningTaskList.locationToIndex(evt.getPoint()));
         int SelectedTask = RunningTaskList.getSelectedIndex();
         if (SelectedTask < RunningTasks.size() && SelectedTask >= 0) {
+            if (evt.getClickCount() == 2) {
+                onPauseRunningTask();
+            }
             if (evt.getButton() == 3) {
                 RunningTaskRightClickPopMenu.show(RunningTaskList, evt.getX(), evt.getY());
             }
@@ -608,6 +593,7 @@ public class MainFrame extends javax.swing.JFrame {
         SAXReader reader = new SAXReader();
         Document document;
         try {
+            reader.setEncoding("UTF-8");
             document = reader.read(new File("tasks.xml"));//读文件
         } catch (DocumentException ex) {
             javax.swing.JOptionPane.showMessageDialog(this, "读取tasks.xml出错！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
@@ -616,8 +602,15 @@ public class MainFrame extends javax.swing.JFrame {
         Tasks.clear();//清空Task
         Element root = document.getRootElement();
         Iterator xmlit = root.elementIterator();
+        Element taskElm = (Element) xmlit.next();
+        try{
+            NewTaskDialog.tasknum = Integer.parseInt(taskElm.getText());
+        }catch (Exception ex){
+            javax.swing.JOptionPane.showMessageDialog(this, "读取tasks.xml出错！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return; 
+        }
         while (xmlit.hasNext()) {
-            Element taskElm = (Element) xmlit.next();
+            taskElm = (Element) xmlit.next();
             Task tsk = new Task();
             tsk.UID = taskElm.elementText("UID");
             tsk.taskname = taskElm.elementText("taskname");
@@ -640,6 +633,7 @@ public class MainFrame extends javax.swing.JFrame {
         // TODO add your handling code here:
         Document document = DocumentHelper.createDocument();
         Element root = document.addElement("tasks");// 创建根节点
+        root.addElement("tasknum").addText(String.valueOf(NewTaskDialog.tasknum));
         Iterator taskit = Tasks.iterator();
         while (taskit.hasNext()) {//写入所有Tasks
             Task tsk = (Task) taskit.next();
@@ -657,7 +651,7 @@ public class MainFrame extends javax.swing.JFrame {
         format.setEncoding("UTF-8");    // 指定XML编码        
         XMLWriter writer;
         try {
-            writer = new XMLWriter(new FileWriter("tasks.xml"), format);
+            writer = new XMLWriter(new FileOutputStream(new File("tasks.xml")), format);
             writer.write(document);
             writer.close();
         } catch (IOException ex) {
@@ -748,9 +742,31 @@ public class MainFrame extends javax.swing.JFrame {
             tsk = editTaskDialog.gettask();
             Tasks.set(SelectedTask, tsk);
         }
+        editTaskDialog = null;//一定要记得清空
         UpdateTaskList();
     }
+    /**
+     * 用于暂停正在运行的任务，便于复用
+     */
+    private void onPauseRunningTask(){
+        int SelectedTask = RunningTaskList.getSelectedIndex();
+        if (SelectedTask >= RunningTasks.size() || SelectedTask < 0) {
+            javax.swing.JOptionPane.showMessageDialog(this, "请选择一项任务！", "错误", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (RunningTasks.get(SelectedTask).isPaused == false) {
+            //TODO add Thread code here:
+            RunningTasks.get(SelectedTask).suspend();
 
+            RunningTasks.get(SelectedTask).isPaused = true;
+        } else {
+            //TODO add Thread code here:
+            RunningTasks.get(SelectedTask).resume();
+
+            RunningTasks.get(SelectedTask).isPaused = false;
+        }
+        UpdateRunningTaskList();
+    }
     /**
      * 用于格式化输出一个Task的内容
      *
@@ -898,6 +914,7 @@ public class MainFrame extends javax.swing.JFrame {
                     new AutoRemoveRunningTaskThread(this, TIMEOUT, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
                     return;
                 }
+                appendTaskLog("时间已到，正准备继续");
             } else {//等邮件
                 int lastmessage_num = -1;
                 POP3SClient pop3 = new POP3SClient(true);
@@ -927,8 +944,10 @@ public class MainFrame extends javax.swing.JFrame {
                         return;
                     }
                 }
+                appendTaskLog("收到邮件，正准备继续");
             }
             if (thatindex == 0) {//发邮件
+                appendTaskLog("准备发送邮件");
                 SimpleEmail email = new SimpleEmail();
                 if (thisindex == 0) {//定时发送，所以只能用默认邮箱发送
                     Properties props = new Properties();
@@ -956,6 +975,7 @@ public class MainFrame extends javax.swing.JFrame {
                         return;
                     }
                 } else {//定时发送，所以只能用默认邮箱发送
+                    appendTaskLog("定时发送，所以只能用默认邮箱发送");
                     try {
                         email.setHostName("smtp." + thisstring1.split("@")[1]);//邮件服务器 默认 为smtp. + domain
                         email.setAuthentication(thisstring1, thisstring2);//smtp认证的用户名和密码  
@@ -971,7 +991,9 @@ public class MainFrame extends javax.swing.JFrame {
                         return;
                     }
                 }
+                appendTaskLog("邮件发送成功！");
             } else {//发微博
+                appendTaskLog("准备发送微博");
                 Properties props = new Properties();
                 try {
                     props.load(new FileInputStream("weiboauth.properties"));
@@ -987,6 +1009,7 @@ public class MainFrame extends javax.swing.JFrame {
                     new AutoRemoveRunningTaskThread(this, RUNTIMEERROR, 10000).start();//新建一个把自己删掉的线程，十秒钟之后再删掉
                     return;
                 }
+                appendTaskLog("微博发送成功！");
             }
             //RunningTasks.remove(tsk.UID);
             new AutoRemoveRunningTaskThread(this, SUCCESS).start();//新建一个把自己删掉的线程

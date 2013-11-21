@@ -601,7 +601,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
 
     //settask函数，用于初始化赋值
     public void settask(Task task) {
-        tsk = task;
+        tsk = new Task(task);
         TaskNameText.setText(tsk.taskname);
         ThisComboBox.setSelectedIndex(tsk.thisindex);
         if (ThisComboBox.getSelectedIndex() == 0) {//时间
@@ -694,20 +694,24 @@ public class NewTaskDialog extends javax.swing.JDialog {
         //开始判断微博、授权微博
         if(tsk.thatindex == 1)
         {
-            setWeibo();
+            if(!setWeibo()){
+                return;
+            }
         }
         
         OK = true;//让调用的函数知道选择了OK。
         tasknum++;
         dispose();
     }
-    public void setWeibo()
+    public boolean setWeibo()
     {
         Properties props = new Properties();
         try {
             props.load(new FileInputStream("weiboauth.properties"));
         } catch (Exception ex) {
             Logger.getLogger(NewTaskDialog.class.getName()).log(Level.SEVERE, null, ex);
+            javax.swing.JOptionPane.showMessageDialog(this, "读取weiboauth.properties失败！", "文件读写失败", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return false;
         }
         String Access_token;
         if (props.getProperty(tsk.thatstring1) == null) {
@@ -717,7 +721,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
             } catch (WeiboException e) {
             }
             if (javax.swing.JOptionPane.showConfirmDialog(this, "你的微博尚未授权\n请在弹出的网页中登陆、授权，等到网页中显示成功后再点击确认", "操作确认", javax.swing.JOptionPane.OK_CANCEL_OPTION) == javax.swing.JOptionPane.CANCEL_OPTION) {
-                return;
+                return false;
             }
             String code = Getpage.getPage("http://oubeichen.com/oauth.txt");
             code = code.substring(0, code.length() - 2);//去掉最后一个换行
@@ -726,7 +730,7 @@ public class NewTaskDialog extends javax.swing.JDialog {
                 System.out.print(code);
             } catch (WeiboException e) {
                 javax.swing.JOptionPane.showMessageDialog(this, "授权失败，请检查网络！", "授权失败", javax.swing.JOptionPane.ERROR_MESSAGE);
-                return;
+                return false;
             }
             
             props.setProperty(tsk.thatstring1, Access_token);
@@ -735,14 +739,15 @@ public class NewTaskDialog extends javax.swing.JDialog {
             } catch (IOException ex) {
                 javax.swing.JOptionPane.showMessageDialog(this, "写入weiboauth.properties失败！", "文件读写失败", javax.swing.JOptionPane.ERROR_MESSAGE);
                 Logger.getLogger(NewTaskDialog.class.getName()).log(Level.SEVERE, null, ex);
+                return false;
             }
         }
-        
+        return true;
     }
     
     public boolean OK = false;
     private Task tsk = new Task();
-    static int tasknum = 1;//用于自增任务数
+    public static int tasknum = 1;//用于自增任务数
     String defaultMailUser,defaultMailPass;//默认的邮箱账号密码
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton CancelButton;

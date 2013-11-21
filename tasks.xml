@@ -1,24 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <tasks>
+  <tasknum>6</tasknum>
   <task>
-    <UID>20131019172049116</UID>
+    <UID>20131021191522417</UID>
     <taskname>任务1(到达时间-发邮件)</taskname>
     <thisindex>0</thisindex>
-    <thisstring1>2013-11-30</thisstring1>
-    <thisstring2>23:44</thisstring2>
+    <thisstring1>2013-11-21</thisstring1>
+    <thisstring2>19:17</thisstring2>
     <thatindex>0</thatindex>
-    <thatstring1>sdfds@sdfsd.com</thatstring1>
-    <thatstring2>这是一个测试。23432</thatstring2>
+    <thatstring1>diamondwave@qq.com</thatstring1>
+    <thatstring2>这是一个测试。</thatstring2>
   </task>
   <task>
-    <UID>2013101917213219</UID>
-    <taskname>任务2(到达时间-发邮件)sgfdsdg</taskname>
+    <UID>20131021191541177</UID>
+    <taskname>任务4(到达时间-发邮件)</taskname>
     <thisindex>0</thisindex>
-    <thisstring1>2013-11-15</thisstring1>
-    <thisstring2>23:33</thisstring2>
+    <thisstring1>2013-11-21</thisstring1>
+    <thisstring2>19:17</thisstring2>
     <thatindex>0</thatindex>
-    <thatstring1>diamondwave@qq.comffff</thatstring1>
-    <thatstring2>这是一个测试。ffff</thatstring2>
+    <thatstring1>diamondwave@qq.com</thatstring1>
+    <thatstring2>这是一个测试。</thatstring2>
+  </task>
+  <task>
+    <UID>20131021191542540</UID>
+    <taskname>任务5(到达时间-发邮件)</taskname>
+    <thisindex>0</thisindex>
+    <thisstring1>2013-11-21</thisstring1>
+    <thisstring2>19:17</thisstring2>
+    <thatindex>0</thatindex>
+    <thatstring1>diamondwave@qq.com</thatstring1>
+    <thatstring2>这是一个测试。</thatstring2>
   </task>
 </tasks>
