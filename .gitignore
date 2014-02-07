@@ -4,3 +4,5 @@
 build/
 nbproject/
 /dist/
+weiboauth.properties
+src/config.properties
